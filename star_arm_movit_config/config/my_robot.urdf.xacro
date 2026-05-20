@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="my_robot">
+    <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
+    <xacro:arg name="use_mock" default="true" />
+    <xacro:arg name="serial_port" default="/dev/ttyUSB0" />
+
+    <!-- Import my_robot urdf file -->
+    <xacro:include filename="$(find star_arm)/urdf/star_arm.urdf.xacro" />
+
+    <!-- Import control_xacro -->
+    <xacro:include filename="my_robot.ros2_control.xacro" />
+
+    <xacro:my_robot_ros2_control
+        name="RealSystem"
+        initial_positions_file="$(arg initial_positions_file)"
+        use_mock="$(arg use_mock)"
+        serial_port="$(arg serial_port)"/>
+
+</robot>

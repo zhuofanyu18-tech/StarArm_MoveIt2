@@ -1,0 +1,19 @@
+arm_joint_names:
+  - joint1
+  - joint2
+  - joint3
+  - joint4
+
+gripper_joint_names:
+  - end_joint1
+
+passive_joint_names:
+  - joint5
+  - end_joint2
+
+controller_joint_names:
+  - joint1
+  - joint2
+  - joint3
+  - joint4
+  - end_joint1

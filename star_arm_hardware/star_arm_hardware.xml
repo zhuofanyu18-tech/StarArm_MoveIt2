@@ -1,0 +1,7 @@
+<library path="star_arm_hardware">
+  <class name="star_arm_hardware/StarArmHardwareInterface"
+         type="star_arm_hardware::StarArmHardwareInterface"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>Star Arm Hardware Interface</description>
+  </class>
+</library>

@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ROS 2 build artifacts (if build in-source)
+build/
+install/
+log/
+
+# Large model files
+*.onnx

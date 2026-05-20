@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot name="star_arm">
+  <material name="base_gray">
+    <color rgba="0.2 0.2 0.2 1" />
+  </material>
+  <material name="arm_cyan">
+    <color rgba="0.0 0.8 1.0 1" />
+  </material>
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="0.0275864586435609 9.16647477805559E-05 0.0324590456139455"
+        rpy="0 0 0" />
+      <mass
+        value="0.144504554281563" />
+      <inertia
+        ixx="0.000121778576211421"
+        ixy="4.84539490144028E-07"
+        ixz="1.008250680684E-05"
+        iyy="8.91115266351561E-05"
+        iyz="-3.49729533338273E-12"
+        izz="0.000111457566341753" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="base_gray">
+        <color
+          rgba="0.2 0.2 0.2 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="link1">
+    <inertial>
+      <origin
+        xyz="1.3453252855906E-05 0.0413059005151624 -0.0368213823397828"
+        rpy="0 0 0" />
+      <mass
+        value="0.119500015084103" />
+      <inertia
+        ixx="5.33919609666398E-05"
+        ixy="-5.49525330310466E-08"
+        ixz="-1.15729775390099E-07"
+        iyy="4.7549033361238E-05"
+        iyz="1.19946244949578E-06"
+        izz="3.30906436971184E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link1.STL" />
+      </geometry>
+      <material
+        name="arm_cyan">
+        <color
+          rgba="0.0 0.8 1.0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint1"
+    type="revolute">
+    <origin
+      xyz="0.0552 0 0.03275"
+      rpy="-3.1416 0 1.5708" />
+    <parent
+      link="base_link" />
+    <child
+      link="link1" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-1.60"
+      upper="1.60"
+      effort="100"
+      velocity="1" />
+  </joint>
+  <link
+    name="link2">
+    <inertial>
+      <origin
+        xyz="-0.00335921384804032 0.0945816679704448 0.0174068208732643"
+        rpy="0 0 0" />
+      <mass
+        value="0.130914564240808" />
+      <inertia
+        ixx="0.00018510366056365"
+        ixy="-2.57165620985463E-06"
+        ixz="1.62336294405518E-07"
+        iyy="2.69950008420773E-05"
+        iyz="-8.45473246439525E-07"
+        izz="0.00017706366922862" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link2.STL" />
+      </geometry>
+      <material
+        name="arm_cyan">
+        <color
+          rgba="0.0 0.8 1.0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint2"
+    type="revolute">
+    <origin
+      xyz="-0.01725 0.045 -0.087"
+      rpy="-1.5708 0 -1.5708" />
+    <parent
+      link="link1" />
+    <child
+      link="link2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.75"
+      upper="1.75"
+      effort="100"
+      velocity="1" />
+  </joint>
+  <link
+    name="link3">
+    <inertial>
+      <origin
+        xyz="1.16788708870719E-05 0.0977016302020788 0.0172734290636942"
+        rpy="0 0 0" />
+      <mass
+        value="0.130589042948412" />
+      <inertia
+        ixx="0.000172650242860473"
+        ixy="1.25703414938938E-07"
+        ixz="-3.67980725389453E-11"
+        iyy="2.27248998780146E-05"
+        iyz="1.80392268951775E-07"
+        izz="0.000161491051520502" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link3.STL" />
+      </geometry>
+      <material
+        name="arm_cyan">
+        <color
+          rgba="0.0 0.8 1.0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint3"
+    type="revolute">
+    <origin
+      xyz="-0.026 0.1375 0"
+      rpy="0 0 0" />
+    <parent
+      link="link2" />
+    <child
+      link="link3" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="3.00"
+      effort="100"
+      velocity="1" />
+  </joint>
+  <link
+    name="link4">
+    <inertial>
+      <origin
+        xyz="0.00631217454440636 0.0365391714692126 0.00623188114836135"
+        rpy="0 0 0" />
+      <mass
+        value="0.0832632385047992" />
+      <inertia
+        ixx="3.70113589000222E-05"
+        ixy="-3.43933921249897E-06"
+        ixz="-1.08273760441399E-06"
+        iyy="3.94373023103334E-05"
+        iyz="3.88851296896288E-06"
+        izz="3.23648386666315E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link4.STL" />
+      </geometry>
+      <material
+        name="arm_cyan">
+        <color
+          rgba="0.0 0.8 1.0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint4"
+    type="revolute">
+    <origin
+      xyz="0 0.165 0"
+      rpy="0 0 0" />
+    <parent
+      link="link3" />
+    <child
+      link="link4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.75"
+      upper="1.75"
+      effort="100"
+      velocity="1" />
+  </joint>
+  <link
+    name="camera_link">
+    <inertial>
+      <origin
+        xyz="-6.20027086588593E-05 1.72929014566171E-16 0.00960747464873753"
+        rpy="0 0 0" />
+      <mass
+        value="0.0145747300074259" />
+      <inertia
+        ixx="4.81346494695206E-06"
+        ixy="-7.18281463877342E-22"
+        ixz="3.36765718104557E-09"
+        iyy="7.1150146490885E-07"
+        iyz="-8.75094153204774E-22"
+        izz="4.43946569877743E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/camera_link.STL" />
+      </geometry>
+      <material
+        name="camera_gray">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/camera_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="camera_joint"
+    type="fixed">
+    <origin
+      xyz="0.0365 0.043 0.01725"
+      rpy="1.5708 0 1.5708" />
+    <parent
+      link="link4" />
+    <child
+      link="camera_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="link5">
+    <inertial>
+      <origin
+        xyz="0.010232247136776 -0.00615665727623538 0.0263472886543328"
+        rpy="0 0 0" />
+      <mass
+        value="0.0669587495744025" />
+      <inertia
+        ixx="1.58532114098523E-05"
+        ixy="-7.47430039947888E-07"
+        ixz="9.96514914296277E-07"
+        iyy="3.05212909606378E-05"
+        iyz="2.34382462901691E-06"
+        izz="2.89349312315722E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link5.STL" />
+      </geometry>
+      <material
+        name="arm_cyan">
+        <color
+          rgba="0.0 0.8 1.0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/link5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint5"
+    type="revolute">
+    <origin
+      xyz="0 0.05825 0.01725"
+      rpy="-1.5708 1.5467 0.00" />
+    <parent
+      link="link4" />
+    <child
+      link="link5" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-2"
+      upper="2"
+      effort="100"
+      velocity="1" />
+  </joint>
+  <link
+    name="end_link1">
+    <inertial>
+      <origin
+        xyz="-0.011159382035468 -0.000634504591832008 0.0152747711052601"
+        rpy="0 0 0" />
+      <mass
+        value="0.0120359501834581" />
+      <inertia
+        ixx="2.13160420215434E-06"
+        ixy="-7.81459007033329E-11"
+        ixz="-2.68248085654803E-07"
+        iyy="2.06133033844492E-06"
+        iyz="-1.20710833297542E-07"
+        izz="1.08266456012266E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/end_link1.STL" />
+      </geometry>
+      <material
+        name="arm_cyan">
+        <color
+          rgba="0.0 0.8 1.0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/end_link1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="end_joint1"
+    type="prismatic">
+    <origin
+      xyz="0 -0.0185 0.051"
+      rpy="0 0 0" />
+    <parent
+      link="link5" />
+    <child
+      link="end_link1" />
+    <axis
+      xyz="-1 0 0" />
+    <limit
+      lower="0"
+      upper="0.02"
+      effort="100"
+      velocity="1" />
+  </joint>
+  <link
+    name="end_link2">
+    <inertial>
+      <origin
+        xyz="0.0111593820354694 -0.000632933870844066 0.0152747711052602"
+        rpy="0 0 0" />
+      <mass
+        value="0.012035950183458" />
+      <inertia
+        ixx="2.13160420215434E-06"
+        ixy="-7.81459007037075E-11"
+        ixz="2.68248085654803E-07"
+        iyy="2.06133033844492E-06"
+        iyz="-1.20925472467206E-07"
+        izz="1.08266456012266E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/end_link2.STL" />
+      </geometry>
+      <material
+        name="arm_cyan">
+        <color
+          rgba="0.0 0.8 1.0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://star_arm/meshes/end_link2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="end_joint2"
+    type="prismatic">
+    <origin
+      xyz="0 -0.0185 0.051"
+      rpy="0 0 0" />
+    <parent
+      link="link5" />
+    <child
+      link="end_link2" />
+    <axis
+      xyz="-1 0 0" />
+    <limit
+      lower="0"
+      upper="0.02"
+      effort="100"
+      velocity="1" />
+    <mimic
+      joint="end_joint1"
+      multiplier="-1"
+      offset="0" />
+  </joint>
+</robot>

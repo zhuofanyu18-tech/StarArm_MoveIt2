@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<robot name="my_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="star_arm.urdf"/>
+
+  <xacro:property name="gripper_tcp_forward" value="0.048"/>
+  <xacro:property name="optical_frame_roll" value="-1.57079632679"/>
+  <xacro:property name="optical_frame_pitch" value="0.0"/>
+  <xacro:property name="optical_frame_yaw" value="-1.57079632679"/>
+
+  <!-- RealSense D435i frame aliases under the CAD camera_link mount. -->
+  <link name="camera_depth_frame"/>
+  <joint name="camera_depth_frame_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="camera_link"/>
+    <child link="camera_depth_frame"/>
+  </joint>
+
+  <link name="camera_depth_optical_frame"/>
+  <joint name="camera_depth_optical_joint" type="fixed">
+    <origin
+      xyz="0 0 0"
+      rpy="${optical_frame_roll} ${optical_frame_pitch} ${optical_frame_yaw}"/>
+    <parent link="camera_depth_frame"/>
+    <child link="camera_depth_optical_frame"/>
+  </joint>
+
+  <link name="camera_color_frame"/>
+  <joint name="camera_color_frame_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="camera_link"/>
+    <child link="camera_color_frame"/>
+  </joint>
+
+  <link name="camera_color_optical_frame"/>
+  <joint name="camera_color_optical_joint" type="fixed">
+    <origin
+      xyz="0 0 0"
+      rpy="${optical_frame_roll} ${optical_frame_pitch} ${optical_frame_yaw}"/>
+    <parent link="camera_color_frame"/>
+    <child link="camera_color_optical_frame"/>
+  </joint>
+
+  <link name="gripper_center_link"/>
+  <joint name="gripper_center_fixed_joint" type="fixed">
+    <!-- Position = midpoint of end_joint1/end_joint2 origins in link5. -->
+    <origin xyz="0 -0.0185 0.051" rpy="0 -1.5708 -1.5708"/>
+    <parent link="link5"/>
+    <child link="gripper_center_link"/>
+  </joint>
+
+  <link name="tcp_link"/>
+  <joint name="tcp_fixed_joint" type="fixed">
+    <!-- TCP goes forward along gripper_center +X (equivalent to link5 +Z). -->
+    <origin xyz="${gripper_tcp_forward} 0 0" rpy="0 0 0"/>
+    <parent link="gripper_center_link"/>
+    <child link="tcp_link"/>
+  </joint>
+
+</robot>

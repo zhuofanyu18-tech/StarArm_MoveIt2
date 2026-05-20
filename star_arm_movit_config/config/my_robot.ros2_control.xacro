@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="my_robot_ros2_control"
+                 params="name initial_positions_file
+                         use_mock:=true
+                         serial_port:=/dev/ttyUSB0">
+
+        <xacro:property name="initial_positions"
+                        value="${xacro.load_yaml(initial_positions_file)['initial_positions']}"/>
+
+        <ros2_control name="${name}" type="system">
+            <hardware>
+                <xacro:if value="${use_mock}">
+                    <!-- 仿真模式：使用 mock 硬件 -->
+                    <plugin>mock_components/GenericSystem</plugin>
+                </xacro:if>
+                <xacro:unless value="${use_mock}">
+                    <!-- 真实硬件模式：使用 USB 串口控制 Feetech 舵机 -->
+                    <plugin>star_arm_hardware/StarArmHardwareInterface</plugin>
+                    <param name="serial_port">${serial_port}</param>
+                    <!-- 可选：弧度→舵机单位的转换参数，不设则用默认值 -->
+                    <!-- 默认: scale=652 (4096/2π), offset=2048 (中位) -->
+                    <!-- <param name="rad_to_servo_scale">652</param> -->
+                    <!-- <param name="servo_offset">2048</param> -->
+                    <!-- <param name="default_speed">1500</param> -->
+                </xacro:unless>
+            </hardware>
+
+            <joint name="joint1">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['joint1']}</param>
+                </state_interface>
+            </joint>
+            <joint name="joint2">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['joint2']}</param>
+                </state_interface>
+            </joint>
+            <joint name="joint3">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['joint3']}</param>
+                </state_interface>
+            </joint>
+            <joint name="joint4">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['joint4']}</param>
+                </state_interface>
+            </joint>
+            <joint name="joint5">
+                <!-- joint5 是被动关节，只有状态没有命令 -->
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['joint5']}</param>
+                </state_interface>
+            </joint>
+            <joint name="end_joint1">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['end_joint1']}</param>
+                </state_interface>
+            </joint>
+
+        </ros2_control>
+    </xacro:macro>
+</robot>
