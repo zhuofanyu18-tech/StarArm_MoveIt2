@@ -51,6 +51,7 @@ private:
 
     int default_speed_ = 400;
     int default_acc_ = 40;
+    std::vector<int> joint_speeds_;
 
     int read_throttle_ = 1;    // 保留参数，当前每周期全读
     int write_throttle_ = 1;   // 每 N 个周期写一次

@@ -18,11 +18,6 @@
                     <!-- 真实硬件模式：使用 USB 串口控制 Feetech 舵机 -->
                     <plugin>star_arm_hardware/StarArmHardwareInterface</plugin>
                     <param name="serial_port">${serial_port}</param>
-                    <!-- 可选：弧度→舵机单位的转换参数，不设则用默认值 -->
-                    <!-- 默认: scale=652 (4096/2π), offset=2048 (中位) -->
-                    <!-- <param name="rad_to_servo_scale">652</param> -->
-                    <!-- <param name="servo_offset">2048</param> -->
-                    <!-- <param name="default_speed">1500</param> -->
                 </xacro:unless>
             </hardware>
 

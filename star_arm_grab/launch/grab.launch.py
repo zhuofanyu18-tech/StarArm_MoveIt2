@@ -20,12 +20,32 @@ def generate_launch_description():
     )
     grab_pose_z_offset_arg = DeclareLaunchArgument(
         "grab_pose_z_offset_m",
-        default_value="0.03",
-        description="Extra z offset applied to every incoming /grab_pose target.",
+        default_value="0.07",
+        description="Extra z offset applied to the averaged grab target (m).",
+    )
+    grab_pose_x_offset_arg = DeclareLaunchArgument(
+        "grab_pose_x_offset_m",
+        default_value="0.02",
+        description="Extra x offset applied to the averaged grab target (m).",
+    )
+    stability_samples_arg = DeclareLaunchArgument(
+        "stability_samples",
+        default_value="4",
+        description="Number of stable rou detections required before grab.",
+    )
+    stability_threshold_arg = DeclareLaunchArgument(
+        "stability_threshold_m",
+        default_value="0.015",
+        description="Max allowed distance (m) of detections from centroid for stability.",
+    )
+    camera_frame_arg = DeclareLaunchArgument(
+        "camera_frame",
+        default_value="camera_color_optical_frame",
+        description="Camera optical frame for TF transform to base_link.",
     )
     place_named_target_arg = DeclareLaunchArgument(
         "place_named_target",
-        default_value="fangzhi",
+        default_value="home",
         description="Arm named target used for pepper placement.",
     )
     detect_named_target_arg = DeclareLaunchArgument(
@@ -42,6 +62,11 @@ def generate_launch_description():
         "gripper_open_named_target",
         default_value="gripper_open",
         description="Gripper named target used to open the gripper.",
+    )
+    gripper_settle_time_ms_arg = DeclareLaunchArgument(
+        "gripper_settle_time_ms",
+        default_value="500",
+        description="Delay (ms) after gripper close/open to ensure servo physically settles.",
     )
 
     robot_description = ParameterValue(
@@ -77,6 +102,16 @@ def generate_launch_description():
                 "grab_pose_z_offset_m": ParameterValue(
                     LaunchConfiguration("grab_pose_z_offset_m"), value_type=float
                 ),
+                "grab_pose_x_offset_m": ParameterValue(
+                    LaunchConfiguration("grab_pose_x_offset_m"), value_type=float
+                ),
+                "stability_samples": ParameterValue(
+                    LaunchConfiguration("stability_samples"), value_type=int
+                ),
+                "stability_threshold_m": ParameterValue(
+                    LaunchConfiguration("stability_threshold_m"), value_type=float
+                ),
+                "camera_frame": LaunchConfiguration("camera_frame"),
                 "place_named_target": LaunchConfiguration("place_named_target"),
                 "detect_named_target": LaunchConfiguration("detect_named_target"),
                 "gripper_close_named_target": LaunchConfiguration(
@@ -84,6 +119,9 @@ def generate_launch_description():
                 ),
                 "gripper_open_named_target": LaunchConfiguration(
                     "gripper_open_named_target"
+                ),
+                "gripper_settle_time_ms": ParameterValue(
+                    LaunchConfiguration("gripper_settle_time_ms"), value_type=int
                 ),
             },
         ],
@@ -93,10 +131,15 @@ def generate_launch_description():
         [
             model_arg,
             grab_pose_z_offset_arg,
+            grab_pose_x_offset_arg,
+            stability_samples_arg,
+            stability_threshold_arg,
+            camera_frame_arg,
             place_named_target_arg,
             detect_named_target_arg,
             gripper_close_named_target_arg,
             gripper_open_named_target_arg,
+            gripper_settle_time_ms_arg,
             grab_node,
         ]
     )

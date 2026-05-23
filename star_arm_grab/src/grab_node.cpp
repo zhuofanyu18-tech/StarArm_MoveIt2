@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <deque>
 #include <memory>
 #include <thread>
 #include <rclcpp/rclcpp.hpp>
@@ -8,6 +9,9 @@
 #include <moveit_msgs/msg/joint_constraint.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 int main(int argc, char * argv[])
 {
@@ -87,15 +91,23 @@ int main(int argc, char * argv[])
   const double lock_joint_tolerance_rad =
     get_or_declare_double("lock_joint_tolerance_rad", 0.03);
   const double grab_pose_z_offset_m =
-    get_or_declare_double("grab_pose_z_offset_m", 0.03);
+    get_or_declare_double("grab_pose_z_offset_m", 0.05);
+  const double grab_pose_x_offset_m =
+    get_or_declare_double("grab_pose_x_offset_m", 0.02);
+  const int stability_samples = get_or_declare_int("stability_samples", 4);
+  const double stability_threshold_m =
+    get_or_declare_double("stability_threshold_m", 0.015);
+  const std::string camera_frame =
+    get_or_declare_string("camera_frame", "camera_color_optical_frame");
   const std::string place_named_target =
-    get_or_declare_string("place_named_target", "fangzhi");
+    get_or_declare_string("place_named_target", "home");
   const std::string detect_named_target =
     get_or_declare_string("detect_named_target", "detect");
   const std::string gripper_close_named_target =
     get_or_declare_string("gripper_close_named_target", "gripper_close");
   const std::string gripper_open_named_target =
     get_or_declare_string("gripper_open_named_target", "gripper_open");
+  const int gripper_settle_time_ms = get_or_declare_int("gripper_settle_time_ms", 2000);
 
   // 设置最大速度和加速度的缩放比例（0.0 到 1.0 之间）
   arm_move_group.setMaxVelocityScalingFactor(0.8);
@@ -134,8 +146,8 @@ int main(int argc, char * argv[])
     GRIPPER_GOAL_JOINT_TOLERANCE);
   RCLCPP_INFO(
     move_group_node->get_logger(),
-    "抓取流程参数: grab_pose_z_offset_m=%.4f, place_named_target=%s, detect_named_target=%s, gripper_close_named_target=%s, gripper_open_named_target=%s",
-    grab_pose_z_offset_m,
+    "抓取流程参数: grab_pose_x_offset_m=%.4f, grab_pose_z_offset_m=%.4f, place_named_target=%s, detect_named_target=%s, gripper_close_named_target=%s, gripper_open_named_target=%s",
+    grab_pose_x_offset_m, grab_pose_z_offset_m,
     place_named_target.c_str(),
     detect_named_target.c_str(),
     gripper_close_named_target.c_str(),
@@ -150,14 +162,61 @@ int main(int argc, char * argv[])
     };
   publish_execution_busy(false);
 
-  // 4. 创建话题订阅者，订阅 /grab_pose
+  auto tf_buffer = std::make_shared<tf2_ros::Buffer>(move_group_node->get_clock());
+  auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
+  std::deque<geometry_msgs::msg::PoseStamped> detection_buffer;
+
+  RCLCPP_INFO(
+    move_group_node->get_logger(),
+    "稳定性检测参数: samples=%d, threshold=%.4f m, camera_frame=%s",
+    stability_samples, stability_threshold_m, camera_frame.c_str());
+
+  // 3.5 初始化位姿: arm → detect, gripper → open
+  RCLCPP_INFO(move_group_node->get_logger(), "执行初始化序列...");
+  {
+    arm_move_group.setStartStateToCurrentState();
+    if (arm_move_group.setNamedTarget(detect_named_target)) {
+      auto result = arm_move_group.move();
+      if (result == moveit::core::MoveItErrorCode::SUCCESS) {
+        RCLCPP_INFO(move_group_node->get_logger(),
+          "初始化: 机械臂已到达检测位 (%s)", detect_named_target.c_str());
+      } else {
+        RCLCPP_WARN(move_group_node->get_logger(),
+          "初始化: 机械臂到检测位失败 (error_code=%d)", result.val);
+      }
+    } else {
+      RCLCPP_ERROR(move_group_node->get_logger(),
+        "初始化: 无法设置检测位 '%s'", detect_named_target.c_str());
+    }
+    arm_move_group.clearPoseTargets();
+
+    gripper_move_group.setStartStateToCurrentState();
+    if (gripper_move_group.setNamedTarget(gripper_open_named_target)) {
+      auto result = gripper_move_group.move();
+      if (result == moveit::core::MoveItErrorCode::SUCCESS) {
+        RCLCPP_INFO(move_group_node->get_logger(),
+          "初始化: 夹爪已张开 (%s)", gripper_open_named_target.c_str());
+      } else {
+        RCLCPP_WARN(move_group_node->get_logger(),
+          "初始化: 夹爪张开失败 (error_code=%d)", result.val);
+      }
+    } else {
+      RCLCPP_ERROR(move_group_node->get_logger(),
+        "初始化: 无法设置夹爪张开位 '%s'", gripper_open_named_target.c_str());
+    }
+    gripper_move_group.clearPoseTargets();
+  }
+  RCLCPP_INFO(move_group_node->get_logger(), "初始化序列完成。");
+
+  // 4. 创建话题订阅者，订阅 /pepper/rou_pose
   auto pose_sub = move_group_node->create_subscription<geometry_msgs::msg::PoseStamped>(
-    "/grab_pose", 10,
+    "/pepper/rou_pose", 10,
     [&arm_move_group, &gripper_move_group, move_group_node, use_position_only_goal, lock_joint5,
       locked_joint_name, locked_joint_position_rad, lock_joint_tolerance_rad,
-      grab_pose_z_offset_m, place_named_target, detect_named_target,
-      gripper_close_named_target, gripper_open_named_target,
-      publish_execution_busy](const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+      grab_pose_z_offset_m, grab_pose_x_offset_m, place_named_target, detect_named_target,
+      gripper_close_named_target, gripper_open_named_target, gripper_settle_time_ms,
+      publish_execution_busy, tf_buffer, stability_samples, stability_threshold_m,
+      camera_frame, &detection_buffer](const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
       auto log_wait_next_goal = [&move_group_node]() {
         RCLCPP_INFO(move_group_node->get_logger(), "等待下一次接收抓取坐标...");
       };
@@ -239,10 +298,11 @@ int main(int argc, char * argv[])
             auto move_result = gripper_move_group.move();
             clear_gripper_request_state();
             if (move_result == moveit::core::MoveItErrorCode::SUCCESS) {
+              std::this_thread::sleep_for(std::chrono::milliseconds(gripper_settle_time_ms));
               RCLCPP_INFO(
                 move_group_node->get_logger(),
-                "%s 成功（named target=%s）。",
-                step_name.c_str(), named_target.c_str());
+                "%s 成功（named target=%s, settle_time=%d ms）。",
+                step_name.c_str(), named_target.c_str(), gripper_settle_time_ms);
               return true;
             }
 
@@ -392,34 +452,81 @@ int main(int argc, char * argv[])
           }
         };
 
-      auto target = *msg;
-      if (target.header.frame_id.empty()) {
-        target.header.frame_id = BASE_FRAME;
-        RCLCPP_WARN(
-          move_group_node->get_logger(),
-          "/grab_pose 的 frame_id 为空，已按 '%s' 处理。", BASE_FRAME.c_str());
-      }
-      if (target.header.frame_id != BASE_FRAME && target.header.frame_id != "/" + BASE_FRAME) {
-        RCLCPP_WARN(
-          move_group_node->get_logger(),
-          "收到目标 frame_id=%s（建议直接使用 base_link）。如果 TF 不可达会规划失败。",
-          target.header.frame_id.c_str());
+      // ── 1. TF 变换到 base_link ──
+      geometry_msgs::msg::PoseStamped transformed;
+      try {
+        transformed = tf_buffer->transform(*msg, BASE_FRAME, tf2::durationFromSec(0.2));
+      } catch (const tf2::TransformException & ex) {
+        RCLCPP_WARN(move_group_node->get_logger(),
+          "TF transform failed (%s → %s): %s",
+          msg->header.frame_id.c_str(), BASE_FRAME.c_str(), ex.what());
+        return;
       }
 
-      RCLCPP_INFO(
-        move_group_node->get_logger(),
-        "收到抓取目标，tcp_link 目标(frame=%s): p=[%.4f, %.4f, %.4f], q=[%.4f, %.4f, %.4f, %.4f]",
-        target.header.frame_id.c_str(),
-        target.pose.position.x, target.pose.position.y, target.pose.position.z,
-        target.pose.orientation.x, target.pose.orientation.y,
-        target.pose.orientation.z, target.pose.orientation.w);
+      // ── 2. 累积检测 ──
+      detection_buffer.push_back(transformed);
+      int needed = stability_samples;
+      if (static_cast<int>(detection_buffer.size()) < needed) {
+        RCLCPP_INFO(move_group_node->get_logger(),
+          "累积检测 %d/%d", static_cast<int>(detection_buffer.size()), needed);
+        return;
+      }
+
+      // ── 3. 稳定性检查 ──
+      double cx = 0.0, cy = 0.0, cz = 0.0;
+      for (const auto & p : detection_buffer) {
+        cx += p.pose.position.x;
+        cy += p.pose.position.y;
+        cz += p.pose.position.z;
+      }
+      cx /= needed; cy /= needed; cz /= needed;
+
+      bool stable = true;
+      for (const auto & p : detection_buffer) {
+        double dx = p.pose.position.x - cx;
+        double dy = p.pose.position.y - cy;
+        double dz = p.pose.position.z - cz;
+        double dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist > stability_threshold_m) {
+          stable = false;
+          RCLCPP_WARN(move_group_node->get_logger(),
+            "检测点偏离质心 %.4f m (阈值 %.4f m)，稳定性检查失败",
+            dist, stability_threshold_m);
+          break;
+        }
+      }
+
+      detection_buffer.clear();
+
+      if (!stable) {
+        RCLCPP_WARN(move_group_node->get_logger(),
+          "稳定性检查失败，丢弃缓冲区，重新累积。");
+        return;
+      }
+
+      RCLCPP_INFO(move_group_node->get_logger(),
+        "稳定性检查通过。抓取目标(base_link): [%.4f, %.4f, %.4f]",
+        cx, cy, cz);
+
+      // ── 4. 构建目标位姿并执行抓取 ──
+      auto target = transformed;
+      target.pose.position.x = cx;
+      target.pose.position.y = cy;
+      target.pose.position.z = cz;
+      target.pose.orientation.x = 0.0;
+      target.pose.orientation.y = 0.0;
+      target.pose.orientation.z = 0.0;
+      target.pose.orientation.w = 1.0;
+      target.header.frame_id = BASE_FRAME;
+
+      target.pose.position.x += grab_pose_x_offset_m;
       target.pose.position.z += grab_pose_z_offset_m;
       RCLCPP_INFO(
         move_group_node->get_logger(),
-        "抓取高度补偿后目标(frame=%s): p=[%.4f, %.4f, %.4f]，z_offset=%.4f m",
+        "偏移补偿后目标(frame=%s): p=[%.4f, %.4f, %.4f]，x_offset=%.4f, z_offset=%.4f m",
         target.header.frame_id.c_str(),
         target.pose.position.x, target.pose.position.y, target.pose.position.z,
-        grab_pose_z_offset_m);
+        grab_pose_x_offset_m, grab_pose_z_offset_m);
 
       publish_execution_busy(true);
       if (!execute_grab_pose_target(target)) {
@@ -447,7 +554,7 @@ int main(int argc, char * argv[])
       finish_request();
     });
 
-  RCLCPP_INFO(move_group_node->get_logger(), "抓取节点已启动，正在等待 /grab_pose 话题...");
+  RCLCPP_INFO(move_group_node->get_logger(), "抓取节点已启动，正在等待 /pepper/rou_pose 话题...");
 
   // 5. 等待后台线程结束（保持节点运行）
   spinner.join();

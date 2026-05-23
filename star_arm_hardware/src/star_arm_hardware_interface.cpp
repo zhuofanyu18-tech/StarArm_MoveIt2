@@ -20,7 +20,7 @@ namespace star_arm_hardware
 //  joint2: min{-1.75,3211} center{0,2048} max{1.75,929} → scale=-652, offset=2048
 //  joint3: min{0,3080} center{0,3080} max{3.0,减少} → scale=-652, offset=3080
 //  joint4: min{-1.75,907} center{0,2048} max{1.75,3189} → scale=+652, offset=2048
-//  end_joint1: min{0,1700} max{0.02,2500} → scale=+40000, offset=1700 (直线夹爪) (直线夹爪, m)
+//  end_joint1: min{0,2048} max{0.02,2800} → scale=+37600, offset=2048 (直线夹爪, m)
 // ==========================================================================
 struct JointCalib {
     double scale;   // 含方向符号的 scale (rad→servo)
@@ -39,7 +39,7 @@ static const JointCalib kJointCalibTable[] = {
     // index 4: joint5 (暂不控制，占位)
     {+652.0, 2048.0},
     // index 5: end_joint1 (直线夹爪, servo/m)
-    {+40000.0, 1700.0},
+    {+37600.0, 2048.0},  // 闭合=2048, 张开=2800, scale=(2800-2048)/0.02
 };
 
 // ╔══════════════════════════════════════════════════════════════════╗
@@ -83,8 +83,8 @@ hardware_interface::CallbackReturn StarArmHardwareInterface::on_init(
             joint_offsets_[i]  = 2048.0;
         } else if (name == "end_joint1") {
             joint_servo_ids_[i] = 6;
-            joint_scales_[i]   = +40000.0;  // (2500-1700)/0.02
-            joint_offsets_[i]  = 1700.0;    // 闭合(joint_pos=0)时 servo 值
+            joint_scales_[i]   = +37600.0;  // (2800-2048)/0.02
+            joint_offsets_[i]  = 2048.0;    // 闭合(joint_pos=0)时 servo 值
         }
         // joint5 → servo_id=-1, 不控制
     }
@@ -105,6 +105,17 @@ hardware_interface::CallbackReturn StarArmHardwareInterface::on_init(
     it = info_.hardware_parameters.find("write_throttle");
     if (it != info_.hardware_parameters.end()) {
         write_throttle_ = std::stoi(it->second);
+    }
+
+    joint_speeds_.resize(n, default_speed_);
+    for (size_t i = 0; i < n; i++) {
+        std::string key = info_.joints[i].name + "_speed";
+        auto jt = info_.hardware_parameters.find(key);
+        if (jt != info_.hardware_parameters.end()) {
+            joint_speeds_[i] = std::stoi(jt->second);
+            RCLCPP_INFO(rclcpp::get_logger("StarArmHardware"),
+                "关节 %s 速度设为 %d", info_.joints[i].name.c_str(), joint_speeds_[i]);
+        }
     }
 
     RCLCPP_INFO(rclcpp::get_logger("StarArmHardware"),
@@ -288,14 +299,14 @@ bool StarArmHardwareInterface::send_sync_write(
     int checksum = txpacket[2] + txpacket[3] + txpacket[4]
                  + txpacket[5] + txpacket[6];
 
-    for (size_t i = 0; i < commands.size(); i++) {
+    for (int i = commands.size() - 1; i >= 0; i--) {
         int servo_id = joint_servo_ids_[i];
         if (servo_id < 0) continue;
 
         int pos = static_cast<int>(rad_to_servo(commands[i], i));
         pos = std::max(0, std::min(pos, 4095));
 
-        int speed = default_speed_;
+        int speed = joint_speeds_[i];
         int acc = default_acc_;
 
         txpacket[idx++] = static_cast<uint8_t>(servo_id);

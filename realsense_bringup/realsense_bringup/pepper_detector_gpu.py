@@ -9,7 +9,7 @@ import numpy as np
 import rclpy
 import yaml
 from cv_bridge import CvBridge
-from geometry_msgs.msg import Pose, PoseArray
+from geometry_msgs.msg import Pose, PoseArray, PoseStamped
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
 from rclpy.time import Time
@@ -35,8 +35,7 @@ class PepperDetectorGPU(Node):
         self.declare_parameter('max_valid_depth_m', 1.50)
         self.declare_parameter('max_depth_age_sec', 0.20)
         self.declare_parameter('publish_debug_image', True)
-        self.declare_parameter('stem_class_name', 'bing')
-        self.declare_parameter('fruit_class_name', 'rou')
+        self.declare_parameter('rou_pose_topic', '/pepper/rou_pose')
 
         self.latest_depth = None
         self.latest_depth_header = None
@@ -59,13 +58,14 @@ class PepperDetectorGPU(Node):
 
         self.debug_pub = self.create_publisher(Image, self.get_parameter('debug_image_topic').value, 10)
         self.points_pub = self.create_publisher(PoseArray, self.get_parameter('all_points_topic').value, 10)
+        self.rou_pose_pub = self.create_publisher(PoseStamped, self.get_parameter('rou_pose_topic').value, 10)
 
         self._infer_thread = threading.Thread(target=self._infer_loop, daemon=True)
         self._infer_thread.start()
 
         self.get_logger().info(
             f'pepper_detector_gpu ready. model={self.get_parameter("model_path").value}, '
-            f'classes={self.class_names}, providers={self.session.get_providers()}'
+            f'detect_class=rou, providers={self.session.get_providers()}'
         )
 
     def _resolve_default_model_path(self):
@@ -180,23 +180,33 @@ class PepperDetectorGPU(Node):
 
             detections = self._run_inference(frame)
 
+            # 只保留 rou（果肉）检测
+            rou_detections = [d for d in detections if d['class_name'] == 'rou']
+
             valid_points = []
-            for det in detections:
+            best_rou_xyz = None
+            best_rou_score = -1.0
+            for det in rou_detections:
                 u = int(round((det['x1'] + det['x2']) * 0.5))
                 v = int(round((det['y1'] + det['y2']) * 0.5))
                 depth_m = self._lookup_depth(u, v)
                 xyz = self._project_pixel_to_3d(u, v, depth_m) if depth_m is not None else None
 
-                label_main = f"{det['class_name']} {det['score']:.2f}"
+                label_main = f"rou {det['score']:.2f}"
                 if xyz is not None:
                     label_detail = f'cam=({xyz[0]:.3f},{xyz[1]:.3f},{xyz[2]:.3f})m'
                     valid_points.append(xyz)
+                    if det['score'] > best_rou_score:
+                        best_rou_score = det['score']
+                        best_rou_xyz = xyz
                 else:
                     label_detail = 'depth=invalid'
 
                 self._draw_detection(frame, det, u, v, label_main, label_detail, xyz is not None)
 
             self._publish_points(valid_points, msg.header)
+            if best_rou_xyz is not None:
+                self._publish_rou_pose(best_rou_xyz, msg.header)
             self._publish_debug(frame, msg.header)
             cv2.imshow('pepper_detector_gpu', frame)
             cv2.waitKey(1)
@@ -322,9 +332,8 @@ class PepperDetectorGPU(Node):
 
     def _draw_detection(self, frame, det, u, v, label_main, label_detail, valid):
         x1, y1, x2, y2 = int(round(det['x1'])), int(round(det['y1'])), int(round(det['x2'])), int(round(det['y2']))
-        stem_class = self.get_parameter('stem_class_name').value
         if valid:
-            box_color = (0, 220, 0) if det['class_name'] == stem_class else (255, 180, 0)
+            box_color = (0, 220, 0)
             pt_color = (0, 255, 255)
         else:
             box_color = (0, 0, 255)
@@ -347,6 +356,15 @@ class PepperDetectorGPU(Node):
             pose.orientation.w = 1.0
             msg.poses.append(pose)
         self.points_pub.publish(msg)
+
+    def _publish_rou_pose(self, xyz, header):
+        msg = PoseStamped()
+        msg.header = header
+        msg.pose.position.x = float(xyz[0])
+        msg.pose.position.y = float(xyz[1])
+        msg.pose.position.z = float(xyz[2])
+        msg.pose.orientation.w = 1.0
+        self.rou_pose_pub.publish(msg)
 
     def _publish_debug(self, frame, header):
         if not self.get_parameter('publish_debug_image').value:

@@ -13,6 +13,8 @@
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>moveit_ros_planning_interface</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
   <exec_depend>star_arm</exec_depend>
   <exec_depend>star_arm_movit_config</exec_depend>
   <exec_depend>launch</exec_depend>
