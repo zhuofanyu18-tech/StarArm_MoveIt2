@@ -16,7 +16,7 @@ from sensor_msgs.msg import CameraInfo, Image
 
 
 class PepperRouDetectorCPU(Node):
-    """CPU YOLO 检测器 — 只检测辣椒 rou（果肉），发布 /pepper/rou_pose"""
+    """CPU YOLO 检测器 — 检测辣椒 rou（果肉）和 bing（柄），发布 /pepper/rou_pose 和 /pepper/bing_pose"""
 
     def __init__(self):
         super().__init__('pepper_detector')
@@ -30,6 +30,7 @@ class PepperRouDetectorCPU(Node):
         self.declare_parameter('debug_image_topic', '/detect/image')
         self.declare_parameter('all_points_topic', '/pepper/detected_points')
         self.declare_parameter('rou_pose_topic', '/pepper/rou_pose')
+        self.declare_parameter('bing_pose_topic', '/pepper/bing_pose')
         self.declare_parameter('confidence_threshold', 0.35)
         self.declare_parameter('iou_threshold', 0.45)
         self.declare_parameter('depth_window_size', 5)
@@ -70,10 +71,11 @@ class PepperRouDetectorCPU(Node):
         self.debug_pub = self.create_publisher(Image, self.get_parameter('debug_image_topic').value, 10)
         self.points_pub = self.create_publisher(PoseArray, self.get_parameter('all_points_topic').value, 10)
         self.rou_pose_pub = self.create_publisher(PoseStamped, self.get_parameter('rou_pose_topic').value, 10)
+        self.bing_pose_pub = self.create_publisher(PoseStamped, self.get_parameter('bing_pose_topic').value, 10)
 
         self.get_logger().info(
             f'pepper_detector (CPU) ready. model={self.get_parameter("model_path").value}, '
-            f'detect_class=rou'
+            f'detect_class=rou,bing'
         )
 
     # ── 内参 ──────────────────────────────────────────────
@@ -170,10 +172,14 @@ class PepperRouDetectorCPU(Node):
 
         detections = self._run_inference(frame)
         rou_detections = [d for d in detections if d['class_name'] == 'rou']
+        bing_detections = [d for d in detections if d['class_name'] == 'bing']
 
         valid_points = []
         best_rou_xyz = None
         best_rou_score = -1.0
+        best_bing_xyz = None
+        best_bing_score = -1.0
+
         for det in rou_detections:
             u = int(round((det['x1'] + det['x2']) * 0.5))
             v = int(round((det['y1'] + det['y2']) * 0.5))
@@ -190,11 +196,31 @@ class PepperRouDetectorCPU(Node):
             else:
                 label_detail = 'depth=invalid'
 
-            self._draw_detection(frame, det, u, v, label_main, label_detail, xyz is not None)
+            self._draw_detection(frame, det, u, v, label_main, label_detail, xyz is not None, 'rou')
+
+        for det in bing_detections:
+            u = int(round((det['x1'] + det['x2']) * 0.5))
+            v = int(round((det['y1'] + det['y2']) * 0.5))
+            depth_m = self._lookup_depth(u, v)
+            xyz = self._project_pixel_to_3d(u, v, depth_m) if depth_m is not None else None
+
+            label_main = f"bing {det['score']:.2f}"
+            if xyz is not None:
+                label_detail = f'cam=({xyz[0]:.3f},{xyz[1]:.3f},{xyz[2]:.3f})m'
+                valid_points.append(xyz)
+                if det['score'] > best_bing_score:
+                    best_bing_score = det['score']
+                    best_bing_xyz = xyz
+            else:
+                label_detail = 'depth=invalid'
+
+            self._draw_detection(frame, det, u, v, label_main, label_detail, xyz is not None, 'bing')
 
         self._publish_points(valid_points, msg.header)
         if best_rou_xyz is not None:
             self._publish_rou_pose(best_rou_xyz, msg.header)
+        if best_bing_xyz is not None:
+            self._publish_bing_pose(best_bing_xyz, msg.header)
         self._publish_debug(frame, msg.header)
 
     # ── 推理 ──────────────────────────────────────────────
@@ -322,11 +348,15 @@ class PepperRouDetectorCPU(Node):
 
     # ── 绘图 / 发布 ──────────────────────────────────────
 
-    def _draw_detection(self, frame, det, u, v, label_main, label_detail, valid):
+    def _draw_detection(self, frame, det, u, v, label_main, label_detail, valid, class_name='rou'):
         x1, y1, x2, y2 = int(round(det['x1'])), int(round(det['y1'])), int(round(det['x2'])), int(round(det['y2']))
         if valid:
-            box_color = (0, 220, 0)
-            pt_color = (0, 255, 255)
+            if class_name == 'rou':
+                box_color = (0, 220, 0)
+                pt_color = (0, 255, 255)
+            else:
+                box_color = (255, 140, 0)
+                pt_color = (255, 200, 0)
         else:
             box_color = (0, 0, 255)
             pt_color = (0, 165, 255)
@@ -357,6 +387,15 @@ class PepperRouDetectorCPU(Node):
         msg.pose.position.z = float(xyz[2])
         msg.pose.orientation.w = 1.0
         self.rou_pose_pub.publish(msg)
+
+    def _publish_bing_pose(self, xyz, header):
+        msg = PoseStamped()
+        msg.header = header
+        msg.pose.position.x = float(xyz[0])
+        msg.pose.position.y = float(xyz[1])
+        msg.pose.position.z = float(xyz[2])
+        msg.pose.orientation.w = 1.0
+        self.bing_pose_pub.publish(msg)
 
     def _publish_debug(self, frame, header):
         if not self.get_parameter('publish_debug_image').value:

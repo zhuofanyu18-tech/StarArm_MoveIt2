@@ -63,3 +63,6 @@ ros2 run llm_bridge llm_bridge_node
 source /opt/ros/humble/setup.bash
 ros2 topic pub --once /llm/query std_msgs/msg/String "data: '你好，说说机械臂有几个关节？'"
 ros2 topic echo /llm/response
+
+
+ros2 topic pub /stepper_motor_target std_msgs/msg/Float32MultiArray "{data: [10.0, 10.0]}" --once

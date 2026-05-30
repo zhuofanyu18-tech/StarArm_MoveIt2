@@ -1,0 +1,11 @@
+sensors:
+  - realsense_pointcloud
+realsense_pointcloud:
+    sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+    point_cloud_topic: /camera/camera/points
+    max_range: 2.0
+    point_subsample: 1
+    padding_offset: 0.01
+    padding_scale: 1.0
+    max_update_rate: 5.0
+    filtered_cloud_topic: filtered_cloud

@@ -75,6 +75,7 @@ def generate_launch_description():
         .robot_description(file_path=default_model_path)
         .robot_description_semantic(file_path="config/my_robot.srdf")
         .robot_description_kinematics(file_path="config/kinematics.yaml")
+        .sensors_3d(file_path="config/sensors_3d.yaml")
         .trajectory_execution(
             file_path="config/moveit_controllers.yaml",
             moveit_manage_controllers=False,
@@ -84,6 +85,7 @@ def generate_launch_description():
         .planning_scene_monitor(
             publish_robot_description=True,
             publish_robot_description_semantic=True,
+            publish_planning_scene=True,
         )
         .to_moveit_configs()
     )
@@ -180,7 +182,7 @@ def generate_launch_description():
         condition=IfCondition(use_rviz),
         arguments=["-d", PathJoinSubstitution([
             FindPackageShare("star_arm_movit_config"),
-            "config", "moveit.rviz",
+            "config", "moveit_point.rviz",
         ])],
         parameters=[
             moveit_config.robot_description,

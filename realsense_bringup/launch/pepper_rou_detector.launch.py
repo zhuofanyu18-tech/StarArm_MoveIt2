@@ -43,6 +43,11 @@ def generate_launch_description():
         default_value='true',
         description='Publish annotated debug image.',
     )
+    bing_pose_topic_arg = DeclareLaunchArgument(
+        'bing_pose_topic',
+        default_value='/pepper/bing_pose',
+        description='Topic for publishing the best bing detection pose.',
+    )
 
     # RealSense 相机节点
     realsense_node = IncludeLaunchDescription(
@@ -71,6 +76,7 @@ def generate_launch_description():
             'camera_info_yaml': LaunchConfiguration('camera_info_yaml'),
             'confidence_threshold': LaunchConfiguration('confidence_threshold'),
             'publish_debug_image': LaunchConfiguration('publish_debug_image'),
+            'bing_pose_topic': LaunchConfiguration('bing_pose_topic'),
         }],
     )
 
@@ -86,6 +92,7 @@ def generate_launch_description():
             'camera_info_yaml': LaunchConfiguration('camera_info_yaml'),
             'confidence_threshold': LaunchConfiguration('confidence_threshold'),
             'publish_debug_image': LaunchConfiguration('publish_debug_image'),
+            'bing_pose_topic': LaunchConfiguration('bing_pose_topic'),
         }],
     )
 
@@ -96,6 +103,7 @@ def generate_launch_description():
         start_realsense_arg,
         confidence_arg,
         debug_image_arg,
+        bing_pose_topic_arg,
         realsense_node,
         gpu_node,
         cpu_node,

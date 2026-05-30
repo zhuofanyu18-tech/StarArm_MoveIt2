@@ -20,7 +20,7 @@ namespace star_arm_hardware
 //  joint2: min{-1.75,3211} center{0,2048} max{1.75,929} → scale=-652, offset=2048
 //  joint3: min{0,3080} center{0,3080} max{3.0,减少} → scale=-652, offset=3080
 //  joint4: min{-1.75,907} center{0,2048} max{1.75,3189} → scale=+652, offset=2048
-//  end_joint1: min{0,2048} max{0.02,2800} → scale=+37600, offset=2048 (直线夹爪, m)
+//  end_joint1: min{0,1600} max{0.02,2600} → scale=+50000, offset=1600 (直线夹爪, m)
 // ==========================================================================
 struct JointCalib {
     double scale;   // 含方向符号的 scale (rad→servo)
@@ -39,7 +39,7 @@ static const JointCalib kJointCalibTable[] = {
     // index 4: joint5 (暂不控制，占位)
     {+652.0, 2048.0},
     // index 5: end_joint1 (直线夹爪, servo/m)
-    {+37600.0, 2048.0},  // 闭合=2048, 张开=2800, scale=(2800-2048)/0.02
+    {+50000.0, 1600.0},  // 闭合=1600, 张开=2600, scale=(2600-1600)/0.02
 };
 
 // ╔══════════════════════════════════════════════════════════════════╗
@@ -83,8 +83,8 @@ hardware_interface::CallbackReturn StarArmHardwareInterface::on_init(
             joint_offsets_[i]  = 2048.0;
         } else if (name == "end_joint1") {
             joint_servo_ids_[i] = 6;
-            joint_scales_[i]   = +37600.0;  // (2800-2048)/0.02
-            joint_offsets_[i]  = 2048.0;    // 闭合(joint_pos=0)时 servo 值
+            joint_scales_[i]   = +50000.0;  // (2600-1600)/0.02
+            joint_offsets_[i]  = 1600.0;    // 闭合(joint_pos=0)时 servo 值
         }
         // joint5 → servo_id=-1, 不控制
     }

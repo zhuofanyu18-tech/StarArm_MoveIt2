@@ -57,6 +57,7 @@ def generate_launch_description():
         .robot_description(file_path=default_model_path)
         .robot_description_semantic(file_path="config/my_robot.srdf")
         .robot_description_kinematics(file_path="config/kinematics.yaml")
+        .sensors_3d(file_path="config/sensors_3d.yaml")
         .planning_pipelines(pipelines=["ompl"])
         .trajectory_execution(
             file_path="config/moveit_controllers.yaml",
@@ -143,7 +144,7 @@ def generate_launch_description():
         executable="rviz2",
         name="rviz2",
         output="screen",
-        arguments=["-d", os.path.join(moveit_dir, "config", "moveit.rviz")],
+        arguments=["-d", os.path.join(moveit_dir, "config", "moveit_point.rviz")],
         parameters=[
             moveit_config.robot_description,
             moveit_config.robot_description_semantic,

@@ -36,6 +36,7 @@ class PepperDetectorGPU(Node):
         self.declare_parameter('max_depth_age_sec', 0.20)
         self.declare_parameter('publish_debug_image', True)
         self.declare_parameter('rou_pose_topic', '/pepper/rou_pose')
+        self.declare_parameter('bing_pose_topic', '/pepper/bing_pose')
 
         self.latest_depth = None
         self.latest_depth_header = None
@@ -59,13 +60,14 @@ class PepperDetectorGPU(Node):
         self.debug_pub = self.create_publisher(Image, self.get_parameter('debug_image_topic').value, 10)
         self.points_pub = self.create_publisher(PoseArray, self.get_parameter('all_points_topic').value, 10)
         self.rou_pose_pub = self.create_publisher(PoseStamped, self.get_parameter('rou_pose_topic').value, 10)
+        self.bing_pose_pub = self.create_publisher(PoseStamped, self.get_parameter('bing_pose_topic').value, 10)
 
         self._infer_thread = threading.Thread(target=self._infer_loop, daemon=True)
         self._infer_thread.start()
 
         self.get_logger().info(
             f'pepper_detector_gpu ready. model={self.get_parameter("model_path").value}, '
-            f'detect_class=rou, providers={self.session.get_providers()}'
+            f'detect_class=rou,bing, providers={self.session.get_providers()}'
         )
 
     def _resolve_default_model_path(self):
@@ -180,12 +182,15 @@ class PepperDetectorGPU(Node):
 
             detections = self._run_inference(frame)
 
-            # 只保留 rou（果肉）检测
             rou_detections = [d for d in detections if d['class_name'] == 'rou']
+            bing_detections = [d for d in detections if d['class_name'] == 'bing']
 
             valid_points = []
             best_rou_xyz = None
             best_rou_score = -1.0
+            best_bing_xyz = None
+            best_bing_score = -1.0
+
             for det in rou_detections:
                 u = int(round((det['x1'] + det['x2']) * 0.5))
                 v = int(round((det['y1'] + det['y2']) * 0.5))
@@ -202,11 +207,31 @@ class PepperDetectorGPU(Node):
                 else:
                     label_detail = 'depth=invalid'
 
-                self._draw_detection(frame, det, u, v, label_main, label_detail, xyz is not None)
+                self._draw_detection(frame, det, u, v, label_main, label_detail, xyz is not None, 'rou')
+
+            for det in bing_detections:
+                u = int(round((det['x1'] + det['x2']) * 0.5))
+                v = int(round((det['y1'] + det['y2']) * 0.5))
+                depth_m = self._lookup_depth(u, v)
+                xyz = self._project_pixel_to_3d(u, v, depth_m) if depth_m is not None else None
+
+                label_main = f"bing {det['score']:.2f}"
+                if xyz is not None:
+                    label_detail = f'cam=({xyz[0]:.3f},{xyz[1]:.3f},{xyz[2]:.3f})m'
+                    valid_points.append(xyz)
+                    if det['score'] > best_bing_score:
+                        best_bing_score = det['score']
+                        best_bing_xyz = xyz
+                else:
+                    label_detail = 'depth=invalid'
+
+                self._draw_detection(frame, det, u, v, label_main, label_detail, xyz is not None, 'bing')
 
             self._publish_points(valid_points, msg.header)
             if best_rou_xyz is not None:
                 self._publish_rou_pose(best_rou_xyz, msg.header)
+            if best_bing_xyz is not None:
+                self._publish_bing_pose(best_bing_xyz, msg.header)
             self._publish_debug(frame, msg.header)
             cv2.imshow('pepper_detector_gpu', frame)
             cv2.waitKey(1)
@@ -330,11 +355,15 @@ class PepperDetectorGPU(Node):
         cx, cy = self.intrinsics[2], self.intrinsics[5]
         return (u - cx) * depth_m / fx, (v - cy) * depth_m / fy, depth_m
 
-    def _draw_detection(self, frame, det, u, v, label_main, label_detail, valid):
+    def _draw_detection(self, frame, det, u, v, label_main, label_detail, valid, class_name='rou'):
         x1, y1, x2, y2 = int(round(det['x1'])), int(round(det['y1'])), int(round(det['x2'])), int(round(det['y2']))
         if valid:
-            box_color = (0, 220, 0)
-            pt_color = (0, 255, 255)
+            if class_name == 'rou':
+                box_color = (0, 220, 0)
+                pt_color = (0, 255, 255)
+            else:
+                box_color = (255, 140, 0)
+                pt_color = (255, 200, 0)
         else:
             box_color = (0, 0, 255)
             pt_color = (0, 165, 255)
@@ -365,6 +394,15 @@ class PepperDetectorGPU(Node):
         msg.pose.position.z = float(xyz[2])
         msg.pose.orientation.w = 1.0
         self.rou_pose_pub.publish(msg)
+
+    def _publish_bing_pose(self, xyz, header):
+        msg = PoseStamped()
+        msg.header = header
+        msg.pose.position.x = float(xyz[0])
+        msg.pose.position.y = float(xyz[1])
+        msg.pose.position.z = float(xyz[2])
+        msg.pose.orientation.w = 1.0
+        self.bing_pose_pub.publish(msg)
 
     def _publish_debug(self, frame, header):
         if not self.get_parameter('publish_debug_image').value:

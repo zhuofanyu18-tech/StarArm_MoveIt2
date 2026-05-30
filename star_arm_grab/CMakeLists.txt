@@ -13,9 +13,10 @@ find_package(geometry_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 
 add_executable(grab_node src/grab_node.cpp)
-ament_target_dependencies(grab_node rclcpp std_msgs geometry_msgs moveit_ros_planning_interface tf2_ros tf2_geometry_msgs)
+ament_target_dependencies(grab_node rclcpp std_msgs geometry_msgs moveit_ros_planning_interface tf2_ros tf2_geometry_msgs std_srvs)
 
 install(TARGETS
   grab_node

@@ -45,7 +45,7 @@ def generate_launch_description():
     )
     place_named_target_arg = DeclareLaunchArgument(
         "place_named_target",
-        default_value="home",
+        default_value="drop_zone",
         description="Arm named target used for pepper placement.",
     )
     detect_named_target_arg = DeclareLaunchArgument(
@@ -65,7 +65,7 @@ def generate_launch_description():
     )
     gripper_settle_time_ms_arg = DeclareLaunchArgument(
         "gripper_settle_time_ms",
-        default_value="500",
+        default_value="2000",
         description="Delay (ms) after gripper close/open to ensure servo physically settles.",
     )
 
@@ -88,7 +88,6 @@ def generate_launch_description():
         package="star_arm_grab",
         executable="grab_node",
         output="screen",
-        remappings=[("/joint_states", "/joint_states_stamped")],
         parameters=[
             moveit_config.robot_description,
             moveit_config.robot_description_semantic,

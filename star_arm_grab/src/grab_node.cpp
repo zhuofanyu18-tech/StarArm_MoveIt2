@@ -9,6 +9,7 @@
 #include <moveit_msgs/msg/joint_constraint.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <std_srvs/srv/empty.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -507,6 +508,20 @@ int main(int argc, char * argv[])
       RCLCPP_INFO(move_group_node->get_logger(),
         "稳定性检查通过。抓取目标(base_link): [%.4f, %.4f, %.4f]",
         cx, cy, cz);
+
+      // ── 3.5 清除目标周围 Octomap，避免辣椒本身被视为障碍物 ──
+      {
+        auto clear_client = move_group_node->create_client<std_srvs::srv::Empty>("/clear_octomap");
+        if (clear_client->wait_for_service(std::chrono::seconds(1))) {
+          auto req = std::make_shared<std_srvs::srv::Empty::Request>();
+          auto future = clear_client->async_send_request(req);
+          if (future.wait_for(std::chrono::milliseconds(200)) == std::future_status::ready) {
+            RCLCPP_INFO(move_group_node->get_logger(), "Octomap 已清除，开始规划。");
+          }
+        } else {
+          RCLCPP_WARN(move_group_node->get_logger(), "clear_octomap 服务不可用，跳过清除。");
+        }
+      }
 
       // ── 4. 构建目标位姿并执行抓取 ──
       auto target = transformed;
